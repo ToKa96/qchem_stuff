@@ -98,9 +98,37 @@ def read_qchem_opt(path: str, config: ConfigParser):
     try:
         mol = subprocess.run(config['mol']['qchem_geo'].format(path=path), shell=True, text=True, capture_output=True).stdout
     except KeyError:
-        raise NotImplementedError('No standard parser for qchem geo yet implemented')
+        mol = internal_read_opt(path, config)
+        # raise NotImplementedError('No standard parser for qchem geo yet implemented')
 
     return {'mol': mol}
+
+
+def internal_read_opt(path: str, config: ConfigParser):
+    """TODO: Docstring for internal_read_opt.
+
+    :path: TODO
+    :config: TODO
+    :returns: TODO
+
+    """
+    coords = ''
+    section = False
+    with open(path) as qout:
+        for line in qout:
+            if len(line.split()) == 0:
+                section = False
+            if 'Number of degrees of freedom' in line:
+                section = False
+
+            if section:
+                _, atom, x, y, z = line.split()
+                coords += f'  {atom:2}    {x:10}    {y:10}    {z:10}\n'
+
+            if " ATOM                X               Y               Z" in line:
+                section = True
+                coords = ''
+    return coords
 
 
 def read_qchem_others(path: str, config: ConfigParser):
@@ -115,9 +143,36 @@ def read_qchem_others(path: str, config: ConfigParser):
     try:
         mol = subprocess.run(config['mol']['qchem_input'].format(path=path), shell=True, text=True, capture_output=True).stdout
     except KeyError:
-        raise NotImplementedError('No standard parser for qchem inputs yet implemented')
+        mol = internal_read_mol(path, config)
 
     return {'mol': mol}
+
+
+def internal_read_mol(path: str, config: ConfigParser):
+    """TODO: Docstring for internal_read_mol.
+
+    :path: TODO
+    :config: TODO
+    :returns: TODO
+
+    """
+    section: bool = False
+    coords: str = ''
+    with open(path) as qout:
+        for line in qout:
+
+            if "$end" in line and section:
+                section = False
+                break
+
+            if section:
+                if len(line.split()) == 4:
+                    coords += line
+
+            if '$molecule' in line:
+                section = True
+
+    return coords
 
 
 def parse_rem(path):
