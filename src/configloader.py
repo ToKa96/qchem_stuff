@@ -50,6 +50,6 @@ def write_standard_config(path: str):
     [job send]
     command = 'qchem_send_job --send {{path}}'
     """
-    os.makedirs(path, exist_ok=True)
-    with open(path, 'r') as conf:
+    os.makedirs(os.path.split(path)[0], exist_ok=True)
+    with open(path, 'w') as conf:
         conf.write(configstring)

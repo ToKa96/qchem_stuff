@@ -1,3 +1,4 @@
+#!/export/home/tkaczun/anaconda3/bin/python
 import os
 import argparse
 import re
@@ -7,7 +8,7 @@ from configparser import ConfigParser
 from configloader import load_config
 from templateparser import load_templates
 from molparser import mol_parser
-from writeinput import write_qchem_input
+from writeinput import write_qchem_input, send_qchem_to_cluster
 
 
 def cmdparser():
@@ -22,10 +23,11 @@ def cmdparser():
                         help='the base name of the qchem template or path to it')
     # TODO: how to get the coordinates?
     parser.add_argument('MOLFILE', nargs='+', help='A file from which the xyz coordinates of the molecule can be read.')
-    parser.add_argument('-o', '--output', action='extend', help='the names to be used for the output')
+    parser.add_argument('-o', '--output', action='append', help='the names to be used for the output')
     parser.add_argument('-p', '--print', action='store_true', help='prints all availale keywords in the given template and their defaults')
     parser.add_argument('--input_xyz', action='store_true', help='read the input mol xyz structur if it is an optimization rather than the last one')
     parser.add_argument('--read_rem', help='will use the methods, basis, etc from the given MOLFILE', action='store_true')
+    parser.add_argument('--send', action='store_true', help='if given send the input file to the cluster')
 
     # qchem related keywords
     parser.add_argument('-m', '--method', help='the method value')
@@ -62,7 +64,7 @@ def cmd_main(argv: list):
     if args['print']:
         print_template(templatedata)
 
-    for molfile, outfile in zip(args['output'], args['MOLFILE']):
+    for molfile, outfile in zip(args['MOLFILE'], args['output']):
         moldata = mol_parser(molfile, config, read_rem=args['read_rem'], input_xyz=args['input_xyz'])
         keywords = dict()
         for key, value in templatedata['defaults'].items():
@@ -72,18 +74,23 @@ def cmd_main(argv: list):
             except KeyError:
                 print(f'using default for {key}')
         keywords = update_keywords_with_args(keywords, args)
-        write_qchem_input(outfile, templatedata['template'], keywords)
+        write_qchem_input(outfile, templatedata['template'], keywords, print_template=args['print'])
+
+        if args['send']:
+            send_qchem_to_cluster(outfile, config['job send']['command'])
 
 
 def update_keywords_with_args(keywords: dict, args: dict):
     for key in keywords.keys():
         try:
-            keywords[key] = args[key]
+            if args[key] is not None:
+                keywords[key] = args[key]
         except KeyError:
             pass
 
     for argkey, key in zip(['ram', 'ncpus'], ['mem_total', 'threads']):
-        keywords[key] = args[argkey]
+        if args[argkey] is not None:
+            keywords[key] = args[argkey]
 
     return keywords
 
@@ -101,10 +108,12 @@ def args_mod(args: dict, config: ConfigParser):
     if args['output'] is None:
         args['output'] = []
         for molfile in args['MOLFILE']:
-            args['output'].append(molfile + f'{template_base}.in')
+            args['output'].append(molfile + f'.{template_base}.in')
     elif len(args['output']) == len(args['MOLFILE']):
         pass
     else:
+        print(args['output'])
+        print(args['MOLFILE'])
         raise ValueError('Not enough filenames supplied to -o, --output')
 
     if args['ram'] is not None:

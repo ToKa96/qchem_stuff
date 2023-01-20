@@ -10,6 +10,7 @@ def mol_parser(path: str, config: ConfigParser, read_rem=False, input_xyz=False)
     :returns: TODO
 
     """
+    print(path)
     if path.endswith('.xyz'):
         return read_xyz(path, config)
     elif path.endswith('.out'):
@@ -28,7 +29,7 @@ def read_xyz(path: str, config: ConfigParser):
     """
     mol = ''
     try:
-        mol = subprocess.run(config['mol']['xyz'].format(path=path))
+        mol = subprocess.run(config['mol']['xyz'].format(path=path), shell=True, text=True, capture_output=True).stdout
     except KeyError:
         with open(path) as xyz:
             for i, line in enumerate(xyz):
@@ -95,7 +96,7 @@ def read_qchem_opt(path: str, config: ConfigParser):
 
     """
     try:
-        mol = subprocess.run(config['mol']['qchem_geo'].format(path=path))
+        mol = subprocess.run(config['mol']['qchem_geo'].format(path=path), shell=True, text=True, capture_output=True).stdout
     except KeyError:
         raise NotImplementedError('No standard parser for qchem geo yet implemented')
 
@@ -112,7 +113,7 @@ def read_qchem_others(path: str, config: ConfigParser):
 
     """
     try:
-        mol = subprocess.run(config['mol']['qchem_input'].format(path=path))
+        mol = subprocess.run(config['mol']['qchem_input'].format(path=path), shell=True, text=True, capture_output=True).stdout
     except KeyError:
         raise NotImplementedError('No standard parser for qchem inputs yet implemented')
 

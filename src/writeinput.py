@@ -1,8 +1,9 @@
+import os
 import subprocess
 from string import Formatter
 
 
-def write_qchem_input(path: str, template: str, keywords: dict):
+def write_qchem_input(path: str, template: str, keywords: dict, print_template=False):
     """TODO: Docstring for write_qchem_input.
 
     :path: TODO
@@ -11,8 +12,18 @@ def write_qchem_input(path: str, template: str, keywords: dict):
     :returns: TODO
 
     """
-    with open(path, 'r') as qin:
-        qin.write(template.format(**keywords))
+    dirpath = os.path.split(path)[0]
+    os.makedirs(dirpath, exist_ok=True)
+    with open(path, 'w') as qin:
+        for key, value in keywords.items():
+            if value is None:
+                print(f"** Warning: {key} is None **")
+        
+        inputstring = template.format(**keywords)
+        
+        if print_template:
+            print(inputstring)
+        qin.write(inputstring)
 
 
 def send_qchem_to_cluster(path: str, method, **kwargs):
