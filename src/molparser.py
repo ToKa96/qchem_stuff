@@ -10,7 +10,7 @@ def mol_parser(path: str, config: ConfigParser, read_rem=False, input_xyz=False)
     :returns: TODO
 
     """
-    print(path)
+    # print(path)
     if path.endswith('.xyz'):
         return read_xyz(path, config)
     elif path.endswith('.out'):
